@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import logo from '../logo.svg'
+import { CameraStream } from '../components/CameraStream'
 
 export const Route = createFileRoute('/')({
   component: App,
@@ -7,33 +7,26 @@ export const Route = createFileRoute('/')({
 
 function App() {
   return (
-    <div className="text-center">
-      <header className="min-h-screen flex flex-col items-center justify-center bg-[#282c34] text-white text-[calc(10px+2vmin)]">
-        <img
-          src={logo}
-          className="h-[40vmin] pointer-events-none animate-[spin_20s_linear_infinite]"
-          alt="logo"
-        />
-        <p>
-          Edit <code>src/routes/index.tsx</code> and save to reload.
-        </p>
-        <a
-          className="text-[#61dafb] hover:underline"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-        <a
-          className="text-[#61dafb] hover:underline"
-          href="https://tanstack.com"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn TanStack
-        </a>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Raspberry Pi Camera Web
+          </h1>
+          <p className="text-lg text-gray-600">
+            Live video streaming from your Raspberry Pi camera
+          </p>
+        </div>
+        
+        <CameraStream />
+        
+        <div className="text-center mt-8 text-sm text-gray-500">
+          <p>Make sure your camera server is running on port 5000</p>
+          <p className="mt-1">
+            Run: <code className="bg-gray-200 px-2 py-1 rounded">python3 raspberrypi/camera_stream.py</code>
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
