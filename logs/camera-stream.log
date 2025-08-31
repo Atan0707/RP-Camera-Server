@@ -145,3 +145,5 @@
 2025-08-31T22:05:42: INFO:__main__:Camera streaming process stopped
 2025-08-31T22:05:42: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:42] "GET /api/camera/status HTTP/1.1" 200 -
 2025-08-31T22:06:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:06:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:07:05: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:07:05] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:08:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:08:06] "GET /api/camera/status HTTP/1.1" 200 -
