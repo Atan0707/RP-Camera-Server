@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-Raspberry Pi Camera Streaming Server
-Provides HTTP endpoints to stream video from the Pi camera
+Raspberry Pi Camera Streaming Server (ArduCam Compatible)
+Provides HTTP endpoints to stream video from ArduCam using rpicam
 """
 
-import cv2
+import subprocess
 import threading
 import time
-from flask import Flask, Response, jsonify
+import signal
+import os
+from flask import Flask, Response, jsonify, request, make_response
 from flask_cors import CORS
-import io
 import logging
 
 # Configure logging
@@ -17,91 +18,176 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend connections
+# Enable CORS for frontend connections with permissive configuration
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",  # Allow all origins for development
+        "methods": ["GET", "POST", "OPTIONS", "HEAD"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": False
+    }
+})
 
 class CameraStream:
     def __init__(self):
-        self.camera = None
-        self.frame = None
+        self.camera_process = None
         self.last_access = time.time()
         self.lock = threading.Lock()
         self.streaming = False
-        self.init_camera()
+        self.camera_available = self.check_camera_available()
 
-    def init_camera(self):
-        """Initialize the camera"""
+    def check_camera_available(self):
+        """Check if camera is available using rpicam"""
         try:
-            # Try different camera indices (0 for USB, others for Pi camera)
-            for camera_index in [0, 1, 2]:
-                self.camera = cv2.VideoCapture(camera_index)
-                if self.camera.isOpened():
-                    # Set camera properties for better performance
-                    self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                    self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                    self.camera.set(cv2.CAP_PROP_FPS, 30)
-                    logger.info(f"Camera initialized successfully on index {camera_index}")
-                    return True
-                self.camera.release()
-            
-            logger.error("Failed to initialize camera")
-            return False
+            result = subprocess.run(['rpicam-hello', '--list-cameras'], 
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0 and 'Available cameras' in result.stdout:
+                logger.info("ArduCam detected and available")
+                return True
+            else:
+                logger.error("No cameras detected by rpicam")
+                return False
         except Exception as e:
-            logger.error(f"Error initializing camera: {e}")
+            logger.error(f"Error checking camera availability: {e}")
             return False
 
-    def get_frame(self):
-        """Capture a frame from the camera"""
-        if not self.camera or not self.camera.isOpened():
-            return None
+    def start_camera_stream(self):
+        """Start rpicam streaming process"""
+        try:
+            # Kill any existing camera processes
+            self.stop_camera_stream()
             
-        ret, frame = self.camera.read()
-        if ret:
-            self.last_access = time.time()
-            return frame
-        return None
+            # Start rpicam-vid for MJPEG streaming to stdout
+            cmd = [
+                'rpicam-vid',
+                '--timeout', '0',  # Run indefinitely
+                '--width', '1280',
+                '--height', '720',
+                '--framerate', '120',
+                '--output', '-',  # Output to stdout
+                '--codec', 'mjpeg',  # MJPEG codec for HTTP streaming
+                '--nopreview',  # No preview window
+                '--inline'  # Include SPS/PPS in stream
+            ]
+            
+            self.camera_process = subprocess.Popen(
+                cmd, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.DEVNULL,  # Suppress stderr to avoid noise
+                bufsize=0
+            )
+            
+            logger.info("Camera streaming process started with rpicam-vid")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error starting camera stream: {e}")
+            return False
+
+    def stop_camera_stream(self):
+        """Stop camera streaming process"""
+        try:
+            if self.camera_process:
+                self.camera_process.terminate()
+                try:
+                    self.camera_process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    self.camera_process.kill()
+                    self.camera_process.wait()
+                self.camera_process = None
+                logger.info("Camera streaming process stopped")
+        except Exception as e:
+            logger.error(f"Error stopping camera stream: {e}")
 
     def generate_frames(self):
-        """Generate frames for streaming"""
-        while True:
-            frame = self.get_frame()
-            if frame is None:
-                # If camera fails, try to reinitialize
-                logger.warning("Camera frame capture failed, attempting to reinitialize...")
-                self.init_camera()
-                time.sleep(1)
-                continue
+        """Generate frames for HTTP streaming using rpicam-vid"""
+        if not self.camera_available:
+            logger.error("Camera not available")
+            return
+            
+        # Start the camera stream if not already running
+        if not self.camera_process or self.camera_process.poll() is not None:
+            if not self.start_camera_stream():
+                return
+        
+        try:
+
+            # For MJPEG streaming, we need to read and parse the stream
+            buffer = b''
+            while self.streaming and self.camera_process and self.camera_process.poll() is None:
+                # Read chunk of data from camera process
+                chunk = self.camera_process.stdout.read(4096)
+                if not chunk:
+                    break
+                    
+                buffer += chunk
+                self.last_access = time.time()
                 
-            # Encode frame as JPEG
-            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-            frame_bytes = buffer.tobytes()
-            
-            # Yield frame in multipart format
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            
-            # Small delay to control frame rate
-            time.sleep(0.033)  # ~30 FPS
+                # Look for JPEG frame markers
+                while True:
+                    # Find start of JPEG (FF D8)
+                    start = buffer.find(b'\xff\xd8')
+                    if start == -1:
+                        break
+                        
+                    # Find end of JPEG (FF D9)
+                    end = buffer.find(b'\xff\xd9', start)
+                    if end == -1:
+                        break
+                        
+                    # Extract complete JPEG frame
+                    frame = buffer[start:end+2]
+                    buffer = buffer[end+2:]
+                    
+                    # Yield frame in multipart format
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                
+        except Exception as e:
+            logger.error(f"Error in frame generation: {e}")
+        finally:
+            self.stop_camera_stream()
 
     def start_streaming(self):
         """Start the camera streaming"""
-        if not self.streaming:
+        if not self.streaming and self.camera_available:
             self.streaming = True
             logger.info("Camera streaming started")
+            return True
+        return False
 
     def stop_streaming(self):
         """Stop the camera streaming"""
         if self.streaming:
             self.streaming = False
+            self.stop_camera_stream()
             logger.info("Camera streaming stopped")
 
     def cleanup(self):
         """Release camera resources"""
-        if self.camera:
-            self.camera.release()
-            logger.info("Camera resources released")
+        self.stop_streaming()
+        logger.info("Camera resources cleaned up")
 
 # Global camera instance
 camera_stream = CameraStream()
+
+def add_cors_headers(response):
+    """Add CORS headers to response"""
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS, HEAD'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return response
+
+@app.after_request
+def after_request(response):
+    """Add CORS headers to all responses"""
+    return add_cors_headers(response)
+
+@app.route('/api/<path:path>', methods=['OPTIONS'])
+def handle_options(path):
+    """Handle preflight OPTIONS requests"""
+    response = make_response()
+    return add_cors_headers(response)
 
 @app.route('/api/stream')
 def video_stream():
@@ -115,7 +201,7 @@ def video_stream():
 @app.route('/api/camera/status')
 def camera_status():
     """Get camera status"""
-    if camera_stream.camera and camera_stream.camera.isOpened():
+    if camera_stream.camera_available:
         return jsonify({
             'status': 'active',
             'streaming': camera_stream.streaming,
@@ -144,7 +230,8 @@ def stop_camera():
 def restart_camera():
     """Restart camera"""
     camera_stream.cleanup()
-    if camera_stream.init_camera():
+    camera_stream.camera_available = camera_stream.check_camera_available()
+    if camera_stream.camera_available:
         return jsonify({'message': 'Camera restarted successfully'})
     else:
         return jsonify({'error': 'Failed to restart camera'}), 500
