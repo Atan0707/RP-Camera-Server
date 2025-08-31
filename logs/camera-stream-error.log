@@ -1,0 +1,145 @@
+2025-08-31T21:54:53: INFO:__main__:ArduCam detected and available
+2025-08-31T21:54:53: INFO:__main__:Starting Camera Streaming Server...
+2025-08-31T21:54:53: INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+2025-08-31T21:54:53:  * Running on all addresses (0.0.0.0)
+2025-08-31T21:54:53:  * Running on http://127.0.0.1:5000
+2025-08-31T21:54:53:  * Running on http://192.168.1.16:5000
+2025-08-31T21:54:53: INFO:werkzeug:[33mPress CTRL+C to quit[0m
+2025-08-31T21:55:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:55:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:55:31: INFO:werkzeug:127.0.0.1 - - [31/Aug/2025 21:55:31] "GET /health HTTP/1.1" 200 -
+2025-08-31T21:56:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:56:27: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:27] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:56:29: INFO:__main__:Camera streaming started
+2025-08-31T21:56:29: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:29] "GET /api/camera/start HTTP/1.1" 200 -
+2025-08-31T21:56:32: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:32] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:56:33: INFO:__main__:Camera streaming stopped
+2025-08-31T21:56:33: INFO:__main__:Camera resources cleaned up
+2025-08-31T21:56:33: INFO:__main__:ArduCam detected and available
+2025-08-31T21:56:33: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:33] "GET /api/camera/restart HTTP/1.1" 200 -
+2025-08-31T21:56:33: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:33] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:56:34: INFO:__main__:Camera streaming started
+2025-08-31T21:56:34: INFO:__main__:Camera streaming process started with rpicam-vid
+2025-08-31T21:56:35: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:35] "GET /api/stream?t=1756673794571 HTTP/1.1" 200 -
+2025-08-31T21:56:37: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:37] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:56:42: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:42] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:56:47: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:47] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:56:52: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:52] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:56:57: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:56:57] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:02: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:02] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:07: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:07] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:12: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:12] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:17: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:17] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:23: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:23] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:27: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:27] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:32: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:32] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:37: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:37] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:42: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:42] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:47: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:47] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:52: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:52] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:57:57: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:57:57] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:58:02: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:58:02] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:58:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:58:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:58:07: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:58:07] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:58:12: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:58:12] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:58:18: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:58:18] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:59:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:59:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T21:59:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 21:59:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:00:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:00:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:00:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:00:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:04: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:04] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:07: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:07] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:13: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:12] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:17: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:17] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:22: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:22] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:27: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:27] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:32: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:32] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:37: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:37] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:42: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:42] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:47: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:47] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:52: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:52] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:01:57: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:01:57] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:02:02: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:02:02] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:02:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:02:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:03:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:03:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:03:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:03:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:03:27: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:03:27] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:03:32: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:03:32] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:03:37: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:03:37] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:03:42: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:03:42] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:03:47: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:03:47] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:03:52: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:03:52] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:03:57: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:03:57] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:04:02: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:04:02] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:04:05: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:04:05] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:04:07: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:04:07] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:04:12: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:04:12] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:04:17: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:04:17] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:04:22: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:04:22] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:04:27: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:04:27] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:05: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:05] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:06] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:17: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:17] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:19: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:19] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:21: INFO:__main__:Camera streaming process stopped
+2025-08-31T22:05:21: INFO:__main__:Camera streaming process stopped
+2025-08-31T22:05:21: INFO:__main__:Camera streaming stopped
+2025-08-31T22:05:21: INFO:__main__:Camera resources cleaned up
+2025-08-31T22:05:22: INFO:__main__:ArduCam detected and available
+2025-08-31T22:05:22: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:22] "GET /api/camera/restart HTTP/1.1" 200 -
+2025-08-31T22:05:22: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:22] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:23: INFO:__main__:Camera streaming started
+2025-08-31T22:05:23: INFO:__main__:Camera streaming process started with rpicam-vid
+2025-08-31T22:05:23: INFO:__main__:Camera streaming process stopped
+2025-08-31T22:05:23: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:23] "GET /api/stream?t=1756674323085 HTTP/1.1" 200 -
+2025-08-31T22:05:23: INFO:__main__:Camera streaming process stopped
+2025-08-31T22:05:23: INFO:__main__:Camera streaming stopped
+2025-08-31T22:05:23: INFO:__main__:Camera resources cleaned up
+2025-08-31T22:05:23: INFO:__main__:ArduCam detected and available
+2025-08-31T22:05:23: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:23] "GET /api/camera/restart HTTP/1.1" 200 -
+2025-08-31T22:05:23: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:23] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:24: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:24] "GET /api/camera/stop HTTP/1.1" 200 -
+2025-08-31T22:05:24: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:24] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:25: INFO:__main__:Camera resources cleaned up
+2025-08-31T22:05:25: INFO:__main__:ArduCam detected and available
+2025-08-31T22:05:25: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:25] "GET /api/camera/restart HTTP/1.1" 200 -
+2025-08-31T22:05:25: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:25] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:26: INFO:__main__:Camera resources cleaned up
+2025-08-31T22:05:26: INFO:__main__:ArduCam detected and available
+2025-08-31T22:05:26: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:26] "GET /api/camera/restart HTTP/1.1" 200 -
+2025-08-31T22:05:26: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:26] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:27: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:27] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:28: INFO:__main__:Camera streaming started
+2025-08-31T22:05:28: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:28] "GET /api/camera/start HTTP/1.1" 200 -
+2025-08-31T22:05:30: INFO:__main__:Camera streaming stopped
+2025-08-31T22:05:30: INFO:__main__:Camera resources cleaned up
+2025-08-31T22:05:30: INFO:__main__:ArduCam detected and available
+2025-08-31T22:05:30: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:30] "GET /api/camera/restart HTTP/1.1" 200 -
+2025-08-31T22:05:30: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:30] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:30: INFO:__main__:Camera resources cleaned up
+2025-08-31T22:05:31: INFO:__main__:ArduCam detected and available
+2025-08-31T22:05:31: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:31] "GET /api/camera/restart HTTP/1.1" 200 -
+2025-08-31T22:05:31: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:31] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:31: INFO:__main__:Camera streaming started
+2025-08-31T22:05:31: INFO:__main__:Camera streaming process started with rpicam-vid
+2025-08-31T22:05:32: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:32] "GET /api/stream?t=1756674332131 HTTP/1.1" 200 -
+2025-08-31T22:05:32: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:32] "GET /api/stream?t=1756674331360 HTTP/1.1" 200 -
+2025-08-31T22:05:32: INFO:__main__:Camera streaming process stopped
+2025-08-31T22:05:32: INFO:__main__:Camera streaming process stopped
+2025-08-31T22:05:32: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:32] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:34: INFO:__main__:Camera streaming stopped
+2025-08-31T22:05:34: INFO:__main__:Camera resources cleaned up
+2025-08-31T22:05:34: INFO:__main__:ArduCam detected and available
+2025-08-31T22:05:34: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:34] "GET /api/camera/restart HTTP/1.1" 200 -
+2025-08-31T22:05:34: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:34] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:35: INFO:__main__:Camera streaming started
+2025-08-31T22:05:35: INFO:__main__:Camera streaming process started with rpicam-vid
+2025-08-31T22:05:36: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:36] "GET /api/stream?t=1756674335959 HTTP/1.1" 200 -
+2025-08-31T22:05:37: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:37] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:05:42: INFO:__main__:Camera streaming process stopped
+2025-08-31T22:05:42: INFO:__main__:Camera streaming stopped
+2025-08-31T22:05:42: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:42] "GET /api/camera/stop HTTP/1.1" 200 -
+2025-08-31T22:05:42: INFO:__main__:Camera streaming process stopped
+2025-08-31T22:05:42: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:05:42] "GET /api/camera/status HTTP/1.1" 200 -
+2025-08-31T22:06:06: INFO:werkzeug:192.168.1.8 - - [31/Aug/2025 22:06:06] "GET /api/camera/status HTTP/1.1" 200 -
