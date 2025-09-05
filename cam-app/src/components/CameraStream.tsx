@@ -233,17 +233,17 @@ export function CameraStream() {
           )}
           
           {/* Video Stream Display */}
-          <div className="relative bg-gray-100 rounded-lg overflow-hidden aspect-video">
+          <div className="relative bg-gray-100 rounded-lg overflow-hidden">
             {isStreaming ? (
               <img
                 ref={imgRef}
                 alt="Camera Stream"
-                className="w-full h-full object-cover"
+                className="w-full h-auto object-contain max-h-[70vh]"
                 onError={handleImageError}
                 onLoad={handleImageLoad}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="flex items-center justify-center min-h-[300px] text-gray-500">
                 <div className="text-center">
                   <Camera className="w-16 h-16 mx-auto mb-2 opacity-50" />
                   <p>Camera stream not active</p>
