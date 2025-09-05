@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { CameraStream } from '../components/CameraStream'
+import { Gallery } from '../components/Gallery'
 
 export const Route = createFileRoute('/')({
   component: App,
@@ -19,6 +20,11 @@ function App() {
         </div>
         
         <CameraStream />
+        
+        {/* Media Gallery */}
+        <div className="mt-8">
+          <Gallery />
+        </div>
         
         <div className="text-center mt-8 text-sm text-gray-500">
           <p>Make sure your camera server is running on port 5000</p>
