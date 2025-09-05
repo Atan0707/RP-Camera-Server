@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Alert, AlertDescription } from './ui/alert'
-import { Play, Square, RotateCcw, Camera, Wifi, WifiOff, ImageIcon, Download } from 'lucide-react'
+import { Play, Square, RotateCcw, Camera, Wifi, WifiOff, ImageIcon, Download, Video, VideoOff, Circle } from 'lucide-react'
 import { CameraModeSelector } from './CameraModeSelector'
 
 interface CameraMode {
@@ -13,11 +13,19 @@ interface CameraMode {
   name: string
 }
 
+interface RecordingStatus {
+  recording: boolean
+  filename: string | null
+  duration: number
+  start_time: number | null
+}
+
 interface CameraStatus {
   status: 'active' | 'inactive'
   streaming: boolean
   last_access: number | null
   current_mode: CameraMode | null
+  recording: RecordingStatus
 }
 
 const CAMERA_SERVER_URL = 'https://cam1.hrzhkm.xyz'
@@ -32,6 +40,10 @@ export function CameraStream() {
   const [isCapturing, setIsCapturing] = useState(false)
   const [lastCapturedImage, setLastCapturedImage] = useState<{filename: string, url: string, timestamp: string} | null>(null)
   const [captureSuccess, setCaptureSuccess] = useState<string | null>(null)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingDuration, setRecordingDuration] = useState(0)
+  const [lastRecording, setLastRecording] = useState<{filename: string, url: string, duration: number} | null>(null)
+  const [recordingSuccess, setRecordingSuccess] = useState<string | null>(null)
   const imgRef = useRef<HTMLImageElement>(null)
 
   // Check server connection and camera status
@@ -43,6 +55,12 @@ export function CameraStream() {
         setCameraStatus(status)
         setIsServerConnected(true)
         setError(null)
+        
+        // Update recording state from server status
+        if (status.recording) {
+          setIsRecording(status.recording.recording)
+          setRecordingDuration(status.recording.duration || 0)
+        }
       } else {
         setIsServerConnected(false)
         setError('Camera server not responding')
@@ -188,6 +206,73 @@ export function CameraStream() {
     }
   }
 
+  // Start recording
+  const startRecording = async () => {
+    setError(null)
+    setRecordingSuccess(null)
+    
+    try {
+      const response = await fetch(`${CAMERA_SERVER_URL}/api/camera/recording/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        setIsRecording(true)
+        setRecordingDuration(0)
+        setRecordingSuccess(`Recording started: ${result.filename}`)
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setRecordingSuccess(null), 3000)
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        setError(errorData.error || 'Failed to start recording')
+      }
+    } catch (err) {
+      setError('Error starting recording. Make sure the camera server is running.')
+    }
+  }
+
+  // Stop recording
+  const stopRecording = async () => {
+    setError(null)
+    setRecordingSuccess(null)
+    
+    try {
+      const response = await fetch(`${CAMERA_SERVER_URL}/api/camera/recording/stop`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        setIsRecording(false)
+        setRecordingDuration(0)
+        setLastRecording({
+          filename: result.filename,
+          url: result.url,
+          duration: result.duration
+        })
+        setRecordingSuccess(`Recording saved: ${result.filename} (${result.duration.toFixed(1)}s)`)
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => setRecordingSuccess(null), 5000)
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        setError(errorData.error || 'Failed to stop recording')
+      }
+    } catch (err) {
+      setError('Error stopping recording. Make sure the camera server is running.')
+    }
+  }
+
   // Handle camera mode change
   const handleModeChange = async () => {
     // Refresh camera status to get updated mode info
@@ -208,6 +293,19 @@ export function CameraStream() {
     const interval = setInterval(checkStatus, 5000) // Check every 5 seconds
     return () => clearInterval(interval)
   }, [])
+
+  // Update recording duration timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingDuration(prev => prev + 1)
+      }, 1000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [isRecording])
 
   const getStatusBadge = () => {
     if (!isServerConnected) {
@@ -244,6 +342,20 @@ export function CameraStream() {
     </Badge>
   }
 
+  const getRecordingBadge = () => {
+    if (isRecording) {
+      return <Badge variant="default" className="flex items-center gap-1 bg-red-600 animate-pulse">
+        <Circle className="w-2 h-2 fill-current" />
+        Recording
+      </Badge>
+    }
+    
+    return <Badge variant="outline" className="flex items-center gap-1">
+      <VideoOff className="w-3 h-3" />
+      Not Recording
+    </Badge>
+  }
+
   return (
     <div className="w-full max-w-4xl mx-auto space-y-4">
       <Card>
@@ -261,6 +373,7 @@ export function CameraStream() {
             <div className="flex gap-2">
               {getStatusBadge()}
               {getStreamingBadge()}
+              {getRecordingBadge()}
             </div>
           </div>
         </CardHeader>
@@ -274,6 +387,12 @@ export function CameraStream() {
           {captureSuccess && (
             <Alert className="border-green-200 bg-green-50 text-green-800">
               <AlertDescription>{captureSuccess}</AlertDescription>
+            </Alert>
+          )}
+          
+          {recordingSuccess && (
+            <Alert className="border-blue-200 bg-blue-50 text-blue-800">
+              <AlertDescription>{recordingSuccess}</AlertDescription>
             </Alert>
           )}
           
@@ -359,6 +478,27 @@ export function CameraStream() {
               <ImageIcon className="w-4 h-4" />
               {isCapturing ? 'Capturing...' : 'Take Picture'}
             </Button>
+
+            {!isRecording ? (
+              <Button 
+                onClick={startRecording}
+                disabled={!isServerConnected || !cameraStatus?.status}
+                variant="outline"
+                className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50"
+              >
+                <Video className="w-4 h-4" />
+                Start Recording
+              </Button>
+            ) : (
+              <Button 
+                onClick={stopRecording}
+                variant="outline"
+                className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50"
+              >
+                <Square className="w-4 h-4" />
+                Stop Recording ({Math.floor(recordingDuration)}s)
+              </Button>
+            )}
           </div>
 
           {/* Status Information */}
@@ -430,6 +570,50 @@ export function CameraStream() {
                         const link = document.createElement('a');
                         link.href = `${CAMERA_SERVER_URL}${lastCapturedImage.url}`;
                         link.download = lastCapturedImage.filename;
+                        link.click();
+                      }}
+                    >
+                      <Download className="w-3 h-3" />
+                      Download
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Last Recorded Video */}
+          {lastRecording && (
+            <div className="pt-4 border-t">
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Video className="w-5 h-5" />
+                Last Recorded Video
+              </h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                  <div className="flex-shrink-0">
+                    <video
+                      src={`${CAMERA_SERVER_URL}${lastRecording.url}`}
+                      controls
+                      className="w-60 h-40 object-cover rounded border"
+                      preload="metadata"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">Filename:</span> {lastRecording.filename}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Duration:</span> {lastRecording.duration.toFixed(1)} seconds
+                    </p>
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-1"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = `${CAMERA_SERVER_URL}${lastRecording.url}`;
+                        link.download = lastRecording.filename;
                         link.click();
                       }}
                     >

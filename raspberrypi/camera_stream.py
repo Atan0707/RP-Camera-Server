@@ -43,6 +43,12 @@ class CameraStream:
             'name': '720p HD'
         }
         self.latest_frame = None  # Store the latest frame for capture
+        # Recording state
+        self.recording = False
+        self.recording_process = None
+        self.recording_filename = None
+        self.recording_start_time = None
+        self.was_streaming_before_recording = False
         # Available camera modes based on imx519 specifications
         self.available_modes = [
             {
@@ -313,8 +319,144 @@ class CameraStream:
             logger.error(f"Error capturing picture from stream: {e}")
             return {'success': False, 'error': str(e)}
 
+    def start_recording(self, output_dir, duration=None):
+        """Start video recording"""
+        try:
+            if self.recording:
+                return {'success': False, 'error': 'Recording is already in progress'}
+            
+            if not self.camera_available:
+                return {'success': False, 'error': 'Camera not available'}
+            
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"recording_{timestamp}.mp4"
+            output_path = os.path.join(output_dir, filename)
+            
+            # Ensure output directory exists
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Check if streaming is active - if so, we need to handle the resource conflict
+            was_streaming = self.streaming
+            if was_streaming:
+                # Stop the streaming process to free up the camera
+                logger.info("Stopping streaming to start recording")
+                self.stop_streaming()
+                time.sleep(0.5)  # Give camera time to release
+            
+            # Build recording command
+            cmd = [
+                'rpicam-vid',
+                '--width', str(self.current_mode['width']),
+                '--height', str(self.current_mode['height']),
+                '--framerate', str(self.current_mode['framerate']),
+                '--output', output_path,
+                '--codec', 'h264',  # H.264 codec for MP4
+                '--nopreview'
+            ]
+            
+            # Add duration if specified, otherwise record indefinitely
+            if duration:
+                cmd.extend(['--timeout', str(duration * 1000)])  # Convert to milliseconds
+            else:
+                cmd.extend(['--timeout', '0'])  # Record indefinitely
+            
+            # Start recording process
+            self.recording_process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            
+            # Set recording state
+            self.recording = True
+            self.recording_filename = filename
+            self.recording_start_time = time.time()
+            self.was_streaming_before_recording = was_streaming
+            
+            logger.info(f"Video recording started: {filename}")
+            return {
+                'success': True,
+                'filename': filename,
+                'output_path': output_path,
+                'timestamp': timestamp,
+                'streaming_paused': was_streaming
+            }
+            
+        except Exception as e:
+            logger.error(f"Error starting video recording: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def stop_recording(self):
+        """Stop video recording"""
+        try:
+            if not self.recording:
+                return {'success': False, 'error': 'No recording in progress'}
+            
+            if self.recording_process:
+                # Terminate the recording process gracefully
+                self.recording_process.terminate()
+                try:
+                    self.recording_process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    self.recording_process.kill()
+                    self.recording_process.wait()
+                
+                # Calculate recording duration
+                duration = time.time() - self.recording_start_time if self.recording_start_time else 0
+                
+                # Reset recording state
+                filename = self.recording_filename
+                was_streaming_before = getattr(self, 'was_streaming_before_recording', False)
+                self.recording = False
+                self.recording_process = None
+                self.recording_filename = None
+                self.recording_start_time = None
+                self.was_streaming_before_recording = False
+                
+                # Restart streaming if it was active before recording
+                if was_streaming_before:
+                    logger.info("Restarting streaming after recording stopped")
+                    time.sleep(0.5)  # Give camera time to release
+                    self.start_streaming()
+                
+                logger.info(f"Video recording stopped: {filename} (duration: {duration:.1f}s)")
+                return {
+                    'success': True,
+                    'filename': filename,
+                    'duration': duration,
+                    'streaming_resumed': was_streaming_before
+                }
+            else:
+                return {'success': False, 'error': 'No recording process found'}
+                
+        except Exception as e:
+            logger.error(f"Error stopping video recording: {e}")
+            return {'success': False, 'error': str(e)}
+
+    def get_recording_status(self):
+        """Get current recording status"""
+        if self.recording and self.recording_start_time:
+            duration = time.time() - self.recording_start_time
+            return {
+                'recording': True,
+                'filename': self.recording_filename,
+                'duration': duration,
+                'start_time': self.recording_start_time
+            }
+        else:
+            return {
+                'recording': False,
+                'filename': None,
+                'duration': 0,
+                'start_time': None
+            }
+
     def cleanup(self):
         """Release camera resources"""
+        # Stop any ongoing recording
+        if self.recording:
+            self.stop_recording()
         self.stop_streaming()
         logger.info("Camera resources cleaned up")
 
@@ -352,18 +494,26 @@ def video_stream():
 def camera_status():
     """Get camera status"""
     if camera_stream.camera_available:
+        recording_status = camera_stream.get_recording_status()
         return jsonify({
             'status': 'active',
             'streaming': camera_stream.streaming,
             'last_access': camera_stream.last_access,
-            'current_mode': camera_stream.get_current_mode()
+            'current_mode': camera_stream.get_current_mode(),
+            'recording': recording_status
         })
     else:
         return jsonify({
             'status': 'inactive',
             'streaming': False,
             'last_access': None,
-            'current_mode': None
+            'current_mode': None,
+            'recording': {
+                'recording': False,
+                'filename': None,
+                'duration': 0,
+                'start_time': None
+            }
         })
 
 @app.route('/api/camera/start')
@@ -449,6 +599,71 @@ def capture_picture():
         logger.error(f"Error in capture endpoint: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
+@app.route('/api/camera/recording/start', methods=['POST'])
+def start_recording():
+    """Start video recording"""
+    try:
+        # Handle both JSON and form data, with fallback to empty dict
+        try:
+            data = request.get_json(force=True) or {}
+        except Exception:
+            data = request.form.to_dict() if request.form else {}
+        
+        duration = data.get('duration')  # Optional duration in seconds
+        if duration:
+            try:
+                duration = float(duration)
+            except (ValueError, TypeError):
+                duration = None
+        
+        if not camera_stream.camera_available:
+            return jsonify({'error': 'Camera not available'}), 500
+        
+        # Define the output directory (relative to the web app's public directory)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        output_dir = os.path.join(project_root, 'cam-app', 'public', 'record')
+        
+        # Start recording
+        result = camera_stream.start_recording(output_dir, duration)
+        
+        if result['success']:
+            return jsonify({
+                'message': 'Video recording started',
+                'filename': result['filename'],
+                'timestamp': result['timestamp'],
+                'duration_limit': duration,
+                'url': f'/record/{result["filename"]}'
+            })
+        else:
+            return jsonify({'error': result['error']}), 500
+            
+    except Exception as e:
+        logger.error(f"Error in start recording endpoint: {e}")
+        logger.error(f"Request data: {request.data}")
+        logger.error(f"Request content type: {request.content_type}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/camera/recording/stop', methods=['POST'])
+def stop_recording():
+    """Stop video recording"""
+    try:
+        result = camera_stream.stop_recording()
+        
+        if result['success']:
+            return jsonify({
+                'message': 'Video recording stopped',
+                'filename': result['filename'],
+                'duration': result['duration'],
+                'url': f'/record/{result["filename"]}'
+            })
+        else:
+            return jsonify({'error': result['error']}), 500
+            
+    except Exception as e:
+        logger.error(f"Error in stop recording endpoint: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
 @app.route('/api/camera/pictures')
 def list_pictures():
     """List all captured pictures"""
@@ -479,6 +694,36 @@ def list_pictures():
         logger.error(f"Error listing pictures: {e}")
         return jsonify({'error': 'Failed to list pictures'}), 500
 
+@app.route('/api/camera/recordings')
+def list_recordings():
+    """List all recorded videos"""
+    try:
+        # Define the recording directory path
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        record_dir = os.path.join(project_root, 'cam-app', 'public', 'record')
+        
+        recordings = []
+        if os.path.exists(record_dir):
+            for filename in os.listdir(record_dir):
+                if filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
+                    file_path = os.path.join(record_dir, filename)
+                    file_stats = os.stat(file_path)
+                    recordings.append({
+                        'filename': filename,
+                        'url': f'/record/{filename}',
+                        'size': file_stats.st_size,
+                        'created': file_stats.st_mtime
+                    })
+        
+        # Sort by creation time (newest first)
+        recordings.sort(key=lambda x: x['created'], reverse=True)
+        
+        return jsonify({'recordings': recordings})
+    except Exception as e:
+        logger.error(f"Error listing recordings: {e}")
+        return jsonify({'error': 'Failed to list recordings'}), 500
+
 @app.route('/picture/<filename>')
 def serve_picture(filename):
     """Serve captured pictures"""
@@ -493,6 +738,21 @@ def serve_picture(filename):
     except Exception as e:
         logger.error(f"Error serving picture {filename}: {e}")
         return jsonify({'error': 'Picture not found'}), 404
+
+@app.route('/record/<filename>')
+def serve_recording(filename):
+    """Serve recorded videos"""
+    try:
+        # Define the recording directory path
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        record_dir = os.path.join(project_root, 'cam-app', 'public', 'record')
+        
+        # Serve the file
+        return send_from_directory(record_dir, filename)
+    except Exception as e:
+        logger.error(f"Error serving recording {filename}: {e}")
+        return jsonify({'error': 'Recording not found'}), 404
 
 @app.route('/health')
 def health_check():
