@@ -77,6 +77,12 @@ class CameraStream:
                 bufsize=0
             )
             
+            # Wait a moment to ensure process started successfully
+            time.sleep(0.5)
+            if self.camera_process.poll() is not None:
+                logger.error("Camera process failed to start or exited immediately")
+                return False
+            
             logger.info("Camera streaming process started with rpicam-vid")
             return True
             
@@ -151,10 +157,20 @@ class CameraStream:
     def start_streaming(self):
         """Start the camera streaming"""
         if not self.streaming and self.camera_available:
-            self.streaming = True
-            logger.info("Camera streaming started")
+            # Actually start the camera process when streaming is requested
+            if self.start_camera_stream():
+                self.streaming = True
+                logger.info("Camera streaming started")
+                return True
+            else:
+                logger.error("Failed to start camera process")
+                return False
+        elif self.streaming:
+            # Already streaming
             return True
-        return False
+        else:
+            logger.error("Camera not available for streaming")
+            return False
 
     def stop_streaming(self):
         """Stop the camera streaming"""
@@ -217,8 +233,10 @@ def camera_status():
 @app.route('/api/camera/start')
 def start_camera():
     """Start camera streaming"""
-    camera_stream.start_streaming()
-    return jsonify({'message': 'Camera streaming started'})
+    if camera_stream.start_streaming():
+        return jsonify({'message': 'Camera streaming started'})
+    else:
+        return jsonify({'error': 'Failed to start camera streaming'}), 500
 
 @app.route('/api/camera/stop')
 def stop_camera():

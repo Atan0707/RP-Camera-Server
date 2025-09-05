@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -11,7 +11,8 @@ interface CameraStatus {
   last_access: number | null
 }
 
-const CAMERA_SERVER_URL = 'http://192.168.1.16:5000'
+const CAMERA_SERVER_URL = 'https://cam1.hrzhkm.xyz'
+// const CAMERA_SERVER_URL = 'http://192.168.1.16:5000'
 
 export function CameraStream() {
   const [isStreaming, setIsStreaming] = useState(false)
@@ -49,15 +50,20 @@ export function CameraStream() {
       const response = await fetch(`${CAMERA_SERVER_URL}/api/camera/start`)
       if (response.ok) {
         setIsStreaming(true)
-        // Update the image source to start streaming
-        if (imgRef.current) {
-          imgRef.current.src = `${CAMERA_SERVER_URL}/api/stream?t=${Date.now()}`
-        }
+        // Wait a moment for camera to initialize before starting stream
+        setTimeout(() => {
+          if (imgRef.current) {
+            imgRef.current.src = `${CAMERA_SERVER_URL}/api/stream?t=${Date.now()}`
+          }
+          // Check status after a short delay to ensure camera is ready
+          setTimeout(checkStatus, 2000)
+        }, 1000)
       } else {
-        setError('Failed to start camera streaming')
+        const errorData = await response.json().catch(() => ({}))
+        setError(errorData.error || 'Failed to start camera streaming')
       }
     } catch (err) {
-      setError('Error starting camera stream')
+      setError('Error starting camera stream. Make sure the camera server is running.')
     } finally {
       setIsLoading(false)
     }
@@ -115,8 +121,18 @@ export function CameraStream() {
 
   // Handle image load error
   const handleImageError = () => {
-    setError('Failed to load camera stream')
-    setIsStreaming(false)
+    console.log('Camera stream failed to load, retrying...')
+    // Don't immediately show error, try to reload the stream once
+    if (imgRef.current && isStreaming) {
+      setTimeout(() => {
+        if (imgRef.current && isStreaming) {
+          imgRef.current.src = `${CAMERA_SERVER_URL}/api/stream?t=${Date.now()}`
+        }
+      }, 2000)
+    } else {
+      setError('Failed to load camera stream. Try restarting the camera.')
+      setIsStreaming(false)
+    }
   }
 
   // Handle image load success
