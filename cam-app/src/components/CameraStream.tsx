@@ -4,11 +4,20 @@ import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Alert, AlertDescription } from './ui/alert'
 import { Play, Square, RotateCcw, Camera, Wifi, WifiOff } from 'lucide-react'
+import { CameraModeSelector } from './CameraModeSelector'
+
+interface CameraMode {
+  width: number
+  height: number
+  framerate: number
+  name: string
+}
 
 interface CameraStatus {
   status: 'active' | 'inactive'
   streaming: boolean
   last_access: number | null
+  current_mode: CameraMode | null
 }
 
 const CAMERA_SERVER_URL = 'https://cam1.hrzhkm.xyz'
@@ -138,6 +147,20 @@ export function CameraStream() {
   // Handle image load success
   const handleImageLoad = () => {
     setError(null)
+  }
+
+  // Handle camera mode change
+  const handleModeChange = async () => {
+    // Refresh camera status to get updated mode info
+    await checkStatus()
+    
+    // If streaming, restart the stream with new settings
+    if (isStreaming) {
+      if (imgRef.current) {
+        // Add timestamp to force reload with new mode
+        imgRef.current.src = `${CAMERA_SERVER_URL}/api/stream?t=${Date.now()}`
+      }
+    }
   }
 
   // Check status on component mount and periodically
@@ -276,7 +299,7 @@ export function CameraStream() {
 
           {/* Status Information */}
           {cameraStatus && isServerConnected && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
               <div className="text-center">
                 <p className="text-sm font-medium">Camera Status</p>
                 <p className="text-lg font-bold text-green-600">
@@ -288,6 +311,17 @@ export function CameraStream() {
                 <p className="text-lg font-bold text-blue-600">
                   {cameraStatus.streaming ? 'Yes' : 'No'}
                 </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium">Current Mode</p>
+                <p className="text-sm font-bold text-purple-600">
+                  {cameraStatus.current_mode ? cameraStatus.current_mode.name : 'Unknown'}
+                </p>
+                {cameraStatus.current_mode && (
+                  <p className="text-xs text-gray-500">
+                    {cameraStatus.current_mode.width}×{cameraStatus.current_mode.height} @ {cameraStatus.current_mode.framerate}fps
+                  </p>
+                )}
               </div>
               <div className="text-center">
                 <p className="text-sm font-medium">Last Access</p>
@@ -302,6 +336,13 @@ export function CameraStream() {
           )}
         </CardContent>
       </Card>
+      
+      {/* Camera Mode Selector */}
+      <CameraModeSelector 
+        serverUrl={CAMERA_SERVER_URL}
+        onModeChange={handleModeChange}
+        disabled={!isServerConnected || isLoading}
+      />
     </div>
   )
 }

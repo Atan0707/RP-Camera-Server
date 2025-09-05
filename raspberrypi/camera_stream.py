@@ -35,6 +35,55 @@ class CameraStream:
         self.lock = threading.Lock()
         self.streaming = False
         self.camera_available = self.check_camera_available()
+        self.current_mode = {
+            'width': 1280,
+            'height': 720,
+            'framerate': 80,
+            'name': '720p HD'
+        }
+        # Available camera modes based on imx519 specifications
+        self.available_modes = [
+            {
+                'id': 'hd_720p',
+                'name': '720p HD',
+                'width': 1280,
+                'height': 720,
+                'framerate': 80,
+                'description': '1280x720 @ 80fps - High frame rate for smooth motion'
+            },
+            {
+                'id': 'fhd_1080p',
+                'name': '1080p Full HD',
+                'width': 1920,
+                'height': 1080,
+                'framerate': 60,
+                'description': '1920x1080 @ 60fps - Standard high definition'
+            },
+            {
+                'id': 'qhd_2k',
+                'name': '2K QHD',
+                'width': 2328,
+                'height': 1748,
+                'framerate': 30,
+                'description': '2328x1748 @ 30fps - High resolution'
+            },
+            {
+                'id': 'uhd_4k',
+                'name': '4K Ultra HD',
+                'width': 3840,
+                'height': 2160,
+                'framerate': 18,
+                'description': '3840x2160 @ 18fps - Ultra high definition'
+            },
+            {
+                'id': 'native_max',
+                'name': 'Native Maximum',
+                'width': 4656,
+                'height': 3496,
+                'framerate': 9,
+                'description': '4656x3496 @ 9fps - Maximum native resolution'
+            }
+        ]
 
     def check_camera_available(self):
         """Check if camera is available using rpicam"""
@@ -61,9 +110,9 @@ class CameraStream:
             cmd = [
                 'rpicam-vid',
                 '--timeout', '0',  # Run indefinitely
-                '--width', '1280',
-                '--height', '720',
-                '--framerate', '120',
+                '--width', str(self.current_mode['width']),
+                '--height', str(self.current_mode['height']),
+                '--framerate', str(self.current_mode['framerate']),
                 '--output', '-',  # Output to stdout
                 '--codec', 'mjpeg',  # MJPEG codec for HTTP streaming
                 '--nopreview',  # No preview window
@@ -179,6 +228,44 @@ class CameraStream:
             self.stop_camera_stream()
             logger.info("Camera streaming stopped")
 
+    def set_camera_mode(self, mode_id):
+        """Set camera mode by ID"""
+        mode = next((m for m in self.available_modes if m['id'] == mode_id), None)
+        if not mode:
+            logger.error(f"Invalid camera mode ID: {mode_id}")
+            return False
+        
+        # Store current streaming state
+        was_streaming = self.streaming
+        
+        # Stop streaming if active
+        if was_streaming:
+            self.stop_streaming()
+        
+        # Update current mode
+        self.current_mode = {
+            'width': mode['width'],
+            'height': mode['height'],
+            'framerate': mode['framerate'],
+            'name': mode['name']
+        }
+        
+        logger.info(f"Camera mode set to {mode['name']} ({mode['width']}x{mode['height']} @ {mode['framerate']}fps)")
+        
+        # Restart streaming if it was active
+        if was_streaming:
+            return self.start_streaming()
+        
+        return True
+
+    def get_available_modes(self):
+        """Get list of available camera modes"""
+        return self.available_modes
+
+    def get_current_mode(self):
+        """Get current camera mode"""
+        return self.current_mode
+
     def cleanup(self):
         """Release camera resources"""
         self.stop_streaming()
@@ -221,13 +308,15 @@ def camera_status():
         return jsonify({
             'status': 'active',
             'streaming': camera_stream.streaming,
-            'last_access': camera_stream.last_access
+            'last_access': camera_stream.last_access,
+            'current_mode': camera_stream.get_current_mode()
         })
     else:
         return jsonify({
             'status': 'inactive',
             'streaming': False,
-            'last_access': None
+            'last_access': None,
+            'current_mode': None
         })
 
 @app.route('/api/camera/start')
@@ -253,6 +342,34 @@ def restart_camera():
         return jsonify({'message': 'Camera restarted successfully'})
     else:
         return jsonify({'error': 'Failed to restart camera'}), 500
+
+@app.route('/api/camera/modes')
+def get_camera_modes():
+    """Get available camera modes"""
+    return jsonify({
+        'available_modes': camera_stream.get_available_modes(),
+        'current_mode': camera_stream.get_current_mode()
+    })
+
+@app.route('/api/camera/mode', methods=['POST'])
+def set_camera_mode():
+    """Set camera mode"""
+    try:
+        data = request.get_json()
+        if not data or 'mode_id' not in data:
+            return jsonify({'error': 'mode_id is required'}), 400
+        
+        mode_id = data['mode_id']
+        if camera_stream.set_camera_mode(mode_id):
+            return jsonify({
+                'message': f'Camera mode set successfully',
+                'current_mode': camera_stream.get_current_mode()
+            })
+        else:
+            return jsonify({'error': 'Failed to set camera mode'}), 500
+    except Exception as e:
+        logger.error(f"Error setting camera mode: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/health')
 def health_check():
