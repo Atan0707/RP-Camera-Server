@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Alert, AlertDescription } from './ui/alert'
-import { Play, Square, RotateCcw, Camera, Wifi, WifiOff } from 'lucide-react'
+import { Play, Square, RotateCcw, Camera, Wifi, WifiOff, ImageIcon, Download } from 'lucide-react'
 import { CameraModeSelector } from './CameraModeSelector'
 
 interface CameraMode {
@@ -29,6 +29,9 @@ export function CameraStream() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isServerConnected, setIsServerConnected] = useState(false)
+  const [isCapturing, setIsCapturing] = useState(false)
+  const [lastCapturedImage, setLastCapturedImage] = useState<{filename: string, url: string, timestamp: string} | null>(null)
+  const [captureSuccess, setCaptureSuccess] = useState<string | null>(null)
   const imgRef = useRef<HTMLImageElement>(null)
 
   // Check server connection and camera status
@@ -149,6 +152,42 @@ export function CameraStream() {
     setError(null)
   }
 
+  // Capture a picture
+  const capturePicture = async () => {
+    setIsCapturing(true)
+    setError(null)
+    setCaptureSuccess(null)
+    
+    try {
+      const response = await fetch(`${CAMERA_SERVER_URL}/api/camera/capture`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        setLastCapturedImage({
+          filename: result.filename,
+          url: result.url,
+          timestamp: result.timestamp
+        })
+        setCaptureSuccess(`Picture captured: ${result.filename}`)
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => setCaptureSuccess(null), 5000)
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        setError(errorData.error || 'Failed to capture picture')
+      }
+    } catch (err) {
+      setError('Error capturing picture. Make sure the camera server is running.')
+    } finally {
+      setIsCapturing(false)
+    }
+  }
+
   // Handle camera mode change
   const handleModeChange = async () => {
     // Refresh camera status to get updated mode info
@@ -232,6 +271,20 @@ export function CameraStream() {
             </Alert>
           )}
           
+          {captureSuccess && (
+            <Alert className="border-green-200 bg-green-50 text-green-800">
+              <AlertDescription>{captureSuccess}</AlertDescription>
+            </Alert>
+          )}
+          
+          {!isStreaming && isServerConnected && cameraStatus?.status === 'active' && (
+            <Alert className="border-blue-200 bg-blue-50 text-blue-800">
+              <AlertDescription>
+                <strong>💡 Tip:</strong> Start streaming first to enable picture capture. Pictures are taken from the live stream.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {/* Video Stream Display */}
           <div className="relative bg-gray-100 rounded-lg overflow-hidden">
             {isStreaming ? (
@@ -295,6 +348,17 @@ export function CameraStream() {
               <Wifi className="w-4 h-4" />
               Refresh Status
             </Button>
+
+            <Button 
+              onClick={capturePicture}
+              disabled={isCapturing || !isServerConnected || !cameraStatus?.status || !isStreaming}
+              variant="secondary"
+              className="flex items-center gap-2"
+              title={!isStreaming ? "Start streaming first to take pictures" : "Take a picture from the current stream"}
+            >
+              <ImageIcon className="w-4 h-4" />
+              {isCapturing ? 'Capturing...' : 'Take Picture'}
+            </Button>
           </div>
 
           {/* Status Information */}
@@ -331,6 +395,49 @@ export function CameraStream() {
                     : 'Never'
                   }
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Last Captured Image */}
+          {lastCapturedImage && (
+            <div className="pt-4 border-t">
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <ImageIcon className="w-5 h-5" />
+                Last Captured Image
+              </h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                  <div className="flex-shrink-0">
+                    <img
+                      src={`${CAMERA_SERVER_URL}${lastCapturedImage.url}`}
+                      alt="Last captured"
+                      className="w-40 h-30 object-cover rounded border"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-sm">
+                      <span className="font-medium">Filename:</span> {lastCapturedImage.filename}
+                    </p>
+                    <p className="text-sm">
+                      <span className="font-medium">Captured:</span> {new Date(lastCapturedImage.timestamp.replace(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6')).toLocaleString()}
+                    </p>
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-1"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = `${CAMERA_SERVER_URL}${lastCapturedImage.url}`;
+                        link.download = lastCapturedImage.filename;
+                        link.click();
+                      }}
+                    >
+                      <Download className="w-3 h-3" />
+                      Download
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

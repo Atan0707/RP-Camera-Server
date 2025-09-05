@@ -9,7 +9,8 @@ import threading
 import time
 import signal
 import os
-from flask import Flask, Response, jsonify, request, make_response
+from datetime import datetime
+from flask import Flask, Response, jsonify, request, make_response, send_from_directory
 from flask_cors import CORS
 import logging
 
@@ -41,6 +42,7 @@ class CameraStream:
             'framerate': 80,
             'name': '720p HD'
         }
+        self.latest_frame = None  # Store the latest frame for capture
         # Available camera modes based on imx519 specifications
         self.available_modes = [
             {
@@ -49,7 +51,7 @@ class CameraStream:
                 'width': 1280,
                 'height': 720,
                 'framerate': 80,
-                'description': '1280x720 @ 80fps - High frame rate for smooth motion'
+                'description': '1280x720 @ 80fps - Cropped from center (zoomed)'
             },
             {
                 'id': 'fhd_1080p',
@@ -57,7 +59,7 @@ class CameraStream:
                 'width': 1920,
                 'height': 1080,
                 'framerate': 60,
-                'description': '1920x1080 @ 60fps - Standard high definition'
+                'description': '1920x1080 @ 60fps - Cropped from center (slightly zoomed)'
             },
             {
                 'id': 'qhd_2k',
@@ -65,7 +67,7 @@ class CameraStream:
                 'width': 2328,
                 'height': 1748,
                 'framerate': 30,
-                'description': '2328x1748 @ 30fps - High resolution'
+                'description': '2328x1748 @ 30fps - Full sensor width (no crop)'
             },
             {
                 'id': 'uhd_4k',
@@ -73,7 +75,7 @@ class CameraStream:
                 'width': 3840,
                 'height': 2160,
                 'framerate': 18,
-                'description': '3840x2160 @ 18fps - Ultra high definition'
+                'description': '3840x2160 @ 18fps - Cropped from center'
             },
             {
                 'id': 'native_max',
@@ -81,7 +83,7 @@ class CameraStream:
                 'width': 4656,
                 'height': 3496,
                 'framerate': 9,
-                'description': '4656x3496 @ 9fps - Maximum native resolution'
+                'description': '4656x3496 @ 9fps - Full native sensor (widest view)'
             }
         ]
 
@@ -115,21 +117,22 @@ class CameraStream:
                 '--framerate', str(self.current_mode['framerate']),
                 '--output', '-',  # Output to stdout
                 '--codec', 'mjpeg',  # MJPEG codec for HTTP streaming
-                '--nopreview',  # No preview window
-                '--inline'  # Include SPS/PPS in stream
+                '--nopreview'  # No preview window
             ]
             
             self.camera_process = subprocess.Popen(
                 cmd, 
                 stdout=subprocess.PIPE, 
-                stderr=subprocess.DEVNULL,  # Suppress stderr to avoid noise
+                stderr=subprocess.PIPE,  # Capture stderr to see errors
                 bufsize=0
             )
             
             # Wait a moment to ensure process started successfully
             time.sleep(0.5)
             if self.camera_process.poll() is not None:
-                logger.error("Camera process failed to start or exited immediately")
+                # Process failed, capture stderr for debugging
+                stderr_output = self.camera_process.stderr.read().decode('utf-8') if self.camera_process.stderr else "No error output"
+                logger.error(f"Camera process failed to start or exited immediately. Error: {stderr_output}")
                 return False
             
             logger.info("Camera streaming process started with rpicam-vid")
@@ -193,6 +196,9 @@ class CameraStream:
                     # Extract complete JPEG frame
                     frame = buffer[start:end+2]
                     buffer = buffer[end+2:]
+                    
+                    # Store the latest frame for potential capture
+                    self.latest_frame = frame
                     
                     # Yield frame in multipart format
                     yield (b'--frame\r\n'
@@ -265,6 +271,47 @@ class CameraStream:
     def get_current_mode(self):
         """Get current camera mode"""
         return self.current_mode
+
+    def capture_picture(self, output_dir):
+        """Capture a picture from the current stream"""
+        try:
+            # Check if camera is streaming and we have a recent frame
+            if not self.streaming:
+                return {'success': False, 'error': 'Camera is not streaming. Start streaming first to capture pictures.'}
+            
+            if self.latest_frame is None:
+                return {'success': False, 'error': 'No frame available for capture. Wait a moment for streaming to begin.'}
+            
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"capture_{timestamp}.jpg"
+            output_path = os.path.join(output_dir, filename)
+            
+            # Ensure output directory exists
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Save the latest frame as a picture
+            with open(output_path, 'wb') as f:
+                f.write(self.latest_frame)
+            
+            # Verify file was created and get size
+            if os.path.exists(output_path):
+                file_size = os.path.getsize(output_path)
+                logger.info(f"Picture captured from stream: {filename} ({file_size} bytes)")
+                return {
+                    'success': True,
+                    'filename': filename,
+                    'path': output_path,
+                    'size': file_size,
+                    'timestamp': timestamp
+                }
+            else:
+                logger.error("Picture file was not created")
+                return {'success': False, 'error': 'Picture file was not created'}
+                
+        except Exception as e:
+            logger.error(f"Error capturing picture from stream: {e}")
+            return {'success': False, 'error': str(e)}
 
     def cleanup(self):
         """Release camera resources"""
@@ -370,6 +417,82 @@ def set_camera_mode():
     except Exception as e:
         logger.error(f"Error setting camera mode: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/camera/capture', methods=['POST'])
+def capture_picture():
+    """Capture a picture from the camera"""
+    try:
+        if not camera_stream.camera_available:
+            return jsonify({'error': 'Camera not available'}), 500
+        
+        # Define the output directory (relative to the web app's public directory)
+        # This should point to the cam-app/public/picture directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        output_dir = os.path.join(project_root, 'cam-app', 'public', 'picture')
+        
+        # Capture the picture
+        result = camera_stream.capture_picture(output_dir)
+        
+        if result['success']:
+            return jsonify({
+                'message': 'Picture captured successfully',
+                'filename': result['filename'],
+                'size': result['size'],
+                'timestamp': result['timestamp'],
+                'url': f'/picture/{result["filename"]}'  # URL path for accessing the image
+            })
+        else:
+            return jsonify({'error': result['error']}), 500
+            
+    except Exception as e:
+        logger.error(f"Error in capture endpoint: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/camera/pictures')
+def list_pictures():
+    """List all captured pictures"""
+    try:
+        # Define the picture directory path
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        picture_dir = os.path.join(project_root, 'cam-app', 'public', 'picture')
+        
+        pictures = []
+        if os.path.exists(picture_dir):
+            for filename in os.listdir(picture_dir):
+                if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                    file_path = os.path.join(picture_dir, filename)
+                    file_stats = os.stat(file_path)
+                    pictures.append({
+                        'filename': filename,
+                        'url': f'/picture/{filename}',
+                        'size': file_stats.st_size,
+                        'created': file_stats.st_mtime
+                    })
+        
+        # Sort by creation time (newest first)
+        pictures.sort(key=lambda x: x['created'], reverse=True)
+        
+        return jsonify({'pictures': pictures})
+    except Exception as e:
+        logger.error(f"Error listing pictures: {e}")
+        return jsonify({'error': 'Failed to list pictures'}), 500
+
+@app.route('/picture/<filename>')
+def serve_picture(filename):
+    """Serve captured pictures"""
+    try:
+        # Define the picture directory path
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        picture_dir = os.path.join(project_root, 'cam-app', 'public', 'picture')
+        
+        # Serve the file
+        return send_from_directory(picture_dir, filename)
+    except Exception as e:
+        logger.error(f"Error serving picture {filename}: {e}")
+        return jsonify({'error': 'Picture not found'}), 404
 
 @app.route('/health')
 def health_check():
